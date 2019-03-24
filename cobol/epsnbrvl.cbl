@@ -13,7 +13,7 @@
       *    OUTPUT:
       *       MONTHLY PAYMENT
       *
-      *    (C) 2019 IBM
+      *    (C) 2020 IBM
        ENVIRONMENT DIVISION.
        CONFIGURATION SECTION.
        SOURCE-COMPUTER. FLEX-ES.
