@@ -7,12 +7,14 @@ deploy:
   bind.confdir: /var/dbb/ispf
   bind.user: NICOLAS
   bind.package: MORTG
-  bind.qualifier: MORTGDB
+  bind.qualifier: DBB1
   bind.subsys: DBB1
   copy.mapping:
      "DBRM" :
        "mode": "BINARY"
      "LOAD":
+       "mode": "LOAD"
+     "LOADMAP":
        "mode": "LOAD"
   pds.mapping: |-
     *.LOAD,JECURMI.RESTAPI.RPL
