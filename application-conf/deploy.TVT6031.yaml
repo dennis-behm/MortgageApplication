@@ -1,7 +1,7 @@
  # Target deploy properties for zos_TVT6031
 ---
 deploy:
-  cics.cicsplex: CICSTS53
+  cics.cicsplex: CICS01
   cics.cmciport: 1490
   bind.maxrc: 4
   bind.confdir: /var/dbb/ispf
