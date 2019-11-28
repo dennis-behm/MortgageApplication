@@ -1,4 +1,4 @@
- # Target deploy properties for zos_brg1008_genapp
+ # Target deploy properties for zos_TVT6031
 ---
 deploy:
   cics.cicsplex: CICSTS53
@@ -15,5 +15,5 @@ deploy:
      "LOAD":
        "mode": "LOAD"
   pds.mapping: |-
-    *.LOAD,NAZARE.MORT.LOAD
-    *.DBRM,NAZARE.MORT.DBRM
+    *.LOAD,JECURMI.RESTAPI.RPL
+    *.DBRM,NICOLAS.DEPLOY.DBRM
