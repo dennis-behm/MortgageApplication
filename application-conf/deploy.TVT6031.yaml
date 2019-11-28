@@ -5,10 +5,10 @@ deploy:
   cics.cmciport: 1490
   bind.maxrc: 4
   bind.confdir: /var/dbb/ispf
-  bind.user: IBMUSER
-  bind.package: GENASA1
-  bind.qualifier: GENADB0
-  bind.subsys: DBBG
+  bind.user: NICOLAS
+  bind.package: MORTG
+  bind.qualifier: MORTGDB
+  bind.subsys: DBB1
   copy.mapping:
      "DBRM" :
        "mode": "BINARY"
