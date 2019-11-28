@@ -1,0 +1,19 @@
+ # Target deploy properties for zos_brg1008_genapp
+---
+deploy:
+  cics.cicsplex: CICSTS53
+  cics.cmciport: 1490
+  bind.maxrc: 4
+  bind.confdir: /var/dbb/ispf
+  bind.user: IBMUSER
+  bind.package: GENASA1
+  bind.qualifier: GENADB0
+  bind.subsys: DBBG
+  copy.mapping:
+     "DBRM" :
+       "mode": "BINARY"
+     "LOAD":
+       "mode": "LOAD"
+  pds.mapping: |-
+    *.LOAD,NAZARE.MORT.LOAD
+    *.DBRM,NAZARE.MORT.DBRM
