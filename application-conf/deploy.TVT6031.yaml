@@ -10,6 +10,8 @@ deploy:
   bind.qualifier: DBB1
   bind.subsys: DBB1
   copy.mapping:
+     "LISTING" :
+       "mode": "BINARY"
      "DBRM" :
        "mode": "BINARY"
      "LOAD":
@@ -19,3 +21,4 @@ deploy:
   pds.mapping: |-
     *.LOAD,JECURMI.RESTAPI.RPL
     *.DBRM,NICOLAS.DEPLOY.DBRM
+    *.PRINT,NICOLAS.DEPLOY.LISTING
