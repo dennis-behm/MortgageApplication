@@ -60,7 +60,7 @@
       *    COPY DFHEIBLK.
            COPY EPSMORT.
 
-       01 OTHERF
+       01 OTHERF.
           COPY SHARED.
 
        01  W-COMMUNICATION-AREA.
