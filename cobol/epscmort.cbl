@@ -59,7 +59,9 @@
            COPY DFHAID.
       *    COPY DFHEIBLK.
            COPY EPSMORT.
-           COPY SHARED.
+
+       01 OTHERF
+          COPY SHARED.
 
        01  W-COMMUNICATION-AREA.
            COPY EPSMTCOM.
