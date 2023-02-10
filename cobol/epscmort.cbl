@@ -1,7 +1,7 @@
        ID DIVISION.
        PROGRAM-ID. EPSCMORT.
       *    THIS DEMONSTRATES CICS/DEBUG           - EPSDEMOS 2008
-      *    WI001!!!!
+      *
       *    THIS PROGRAM WILL RECEIVE A DATE AND COVERT THE DATE TO
       *    AN INTEGER IN A CALLED PROGRAM TO DETERMINE DAYS FROM
       *    CURRENT DATE.
@@ -59,9 +59,6 @@
            COPY DFHAID.
       *    COPY DFHEIBLK.
            COPY EPSMORT.
-
-      * 01 OTHERF.
-      *    COPY SHARED.
 
        01  W-COMMUNICATION-AREA.
            COPY EPSMTCOM.

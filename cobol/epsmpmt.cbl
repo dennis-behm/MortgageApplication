@@ -8,6 +8,7 @@
       *    INPUT:
       *       ORIGINAL PRINCIPLE AMOUNT
       *       YEARS OR MONTH INDICATOR
+      *       NUMBER OF YEARS
       *       NUMBER OF MONTHS
       *       INTEREST RATE
       *    OUTPUT:
