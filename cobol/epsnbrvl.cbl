@@ -13,7 +13,7 @@
       *    OUTPUT:
       *       MONTHLY PAYMENT
       *
-      *    (C) 2023 IBM - I was here
+      *    (C) 2023 IBM - I was here too
        ENVIRONMENT DIVISION.
        CONFIGURATION SECTION.
        SOURCE-COMPUTER. FLEX-ES.
