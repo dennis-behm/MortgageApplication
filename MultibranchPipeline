@@ -705,7 +705,7 @@ pipeline {
 					
 					dir("${WORKSPACE}") {sh "pwd ; ls -al"}
 					
-					dir("${WORKSPACE}/${AppProject}") {
+					dir("${WORKSPACE}/${AppProject}/${AppName}") {
 						sh "git status"
 						sh "git show -s --pretty=%D HEAD"
 					}
