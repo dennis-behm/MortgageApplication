@@ -160,6 +160,22 @@ def DBBfullBuild              = "--fullBuild"
 def DBBscanAll                = "--scanAll"
 def DBBbaselineRef            = "--baselineRef"
 
+def DBBuserBuild              = "--userBuild" 
+/* Todo ... Cleanup script. Reintroducing to workaround the Exception:
+
+groovy.lang.MissingPropertyException: No such property: DBBuserBuild for class: groovy.lang.Binding
+	at groovy.lang.Binding.getVariable(Binding.java:63)
+	at org.jenkinsci.plugins.scriptsecurity.sandbox.groovy.SandboxInterceptor.onGetProperty(SandboxInterceptor.java:251)
+	at org.kohsuke.groovy.sandbox.impl.Checker$7.call(Checker.java:353)
+	at org.kohsuke.groovy.sandbox.impl.Checker.checkedGetProperty(Checker.java:357)
+	at org.kohsuke.groovy.sandbox.impl.Checker.checkedGetProperty(Checker.java:333)
+	at org.kohsuke.groovy.sandbox.impl.Checker.checkedGetProperty(Checker.java:333)
+	at org.kohsuke.groovy.sandbox.impl.Checker.checkedGetProperty(Checker.java:333)
+	at com.cloudbees.groovy.cps.sandbox.SandboxInvoker.getProperty(SandboxInvoker.java:29)
+	at com.cloudbees.groovy.cps.impl.PropertyAccessBlock.rawGet(PropertyAccessBlock.java:20)
+
+*/
+
 // Jenkins
 //
 //   Variables that pertain to Jenkins.
