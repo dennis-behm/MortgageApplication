@@ -411,8 +411,7 @@ pipeline {
 						}
 
 						BranchOkay = true
-					}
-					if  (Branch.startsWith('PROD') == true) {
+					} else if  (Branch.startsWith('PROD') == true) {
 						
 						BranchDuration = "Long"
 						
@@ -439,7 +438,7 @@ pipeline {
 						
 						BranchDuration = "Short"
 						
-						AppHLQ = AppHLQ.replaceAll("<lvl>","REL") // Set correct Mid-Level Qualifier for Build Output
+						AppHLQ = AppHLQ.replaceAll("<lvl>",Branch.take(8).toUpperCase()) // Set correct Mid-Level Qualifier for Build Output
 
 						ucdVersionName = "${ucdVersionName}-Release-${BuildNumber}" // Package Version Name
 						ucdEnvironment = "${ucdEnvironment}-Release" // Deployment Environment
@@ -478,6 +477,20 @@ pipeline {
 							ucdDoPackaging  = false  // Do Not Perform the Packaging
 							ucdDoDeployment = false  // Do Not Perform the Deployment
 						}
+
+						BranchOkay = true
+					}
+
+                    if  (Branch.startsWith('FEAT') == true) {
+						
+						BranchDuration = "Long"
+						
+						AppHLQ = AppHLQ.replaceAll("<lvl>",Branch.take(8).toUpperCase()) // Set correct Mid-Level Qualifier for Build Output
+
+						AppBuildType    = "${DBBimpactBuild}"
+						DBBDoBuild      = true   // Perform DBB Build
+						ucdDoPackaging  = false  // Do Not Perform the Packaging
+						ucdDoDeployment = false  // Do Not Perform the Deployment
 
 						BranchOkay = true
 					}
