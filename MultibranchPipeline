@@ -1,0 +1,1050 @@
+// Name: MultiBranchReleaseBased.groovy
+//
+// Description: A sample Jenkins Declarative Multibranch pipeline job that demonstrates how to
+// implement a "Release-based delivery approach" Git flow branching model. Refer to README for more
+// information.
+//
+// Configuration: Review and customize the variable definition and Stepup stage sections.
+//
+//Debug Variables
+def loggerConfig              = false // Enable DBB Toolkit Tracing (true/false).  See DBBLogger Variable, below
+def verbose                   = true  // Enable zAppBuild Verbose Tracing (true/false)
+def pipeverbose               = true  // Enabled Pipeline Debug Messages (true/false)
+
+// Jenkins
+//
+// Information required to identify Jenkins specific configuration values.
+//
+//   JenkinsAgent             - Name of the Jenkins Agent where the pipelinewill execute in the Jenkins
+//                              environment.
+
+def JenkinsAgent              = "zOS-Agent"
+
+// Dependency Based Build Toolkit
+//
+// Information required to identify the DBB Toolkit version to use and where it is located.
+//
+//   DBBToolkitVRM            - DBB Toolkit Version (in VRM format).
+//   DBBToolkitRoot           - DBB Toolkit install root directory on USS.
+//   DBBToolkitVersDir        - DBB Toolkit Version installed on USS.  Maps to a sub-directory name under
+//                              DBBToolkitRoot.  Useful if you run with multiple versions of the DBB Tookit
+//   DBBgroovyz               - Location of the groovyz script.
+
+def DBBToolkitVRM             = 113
+def DBBToolkitRoot            = "<path>/lpp/IBM"
+def DBBToolkitVersDir         = "dbb_1.1.3"
+def DBBgroovyz                = "${DBBToolkitRoot}/${DBBToolkitVersDir}/bin/groovyz"
+
+// Generic Build Solution (zAppBuild)
+//
+//   Variables that pertain to the generic build solution (zAppBuild), how it is obtained and where it will located.
+//   There are two (2) methods supported.
+//
+//   1. Clone zAppBuild from a server repository (Preferred).
+//   2. Use a previous USS installed static copy.
+//
+//   Clone zAppBuild from a server repository.
+//
+//     zAppBuildgitURL        - Repository URL. Required if zAppBuildDoCheckout=true.
+//     zAppBuildBranch        - Branch Name (Default="main").
+//     zAppBuildgitCredId     - GHE and PAT for Jenkins Pipeline Job.
+//     zAppBuildDoCheckout    - If true, perform zAppBuild Checkout.  Also see zAppBuildStatic.
+//     zAppBuildProject       - Name of the zAppBuild Project Folder under the Pipeline Workspace Directory.
+//                              (i.e., Pipeline Name/Branch). This is where the zAppBuild Repository will be cloned.
+//     zAppBuildVerbose       - Verbose string passed to the DBB Build script. Set later on based on the
+//                              value of pipeline verbose variable.
+//
+//   Use a previous USS installed static copy.
+//
+//     zAppBuildInstall       - Location on USS of the static copy of zAppBuild.
+//     zAppBuildStatic        - Set to true if using a static copy of zAppBuild on USS. Will override
+//                              the zAppBuildDoCheckout to false.
+//
+//   Both Methods
+//
+//     zAppBuild              - Location of the build groovy script. Path and name will be set later on based
+//                              on where zAppBuild is obtained. See zAppBuildStatic.
+//     zAppPkg                - Location of the UCD Packaging groovy script. Path and name will be set later on based
+//                              on where zAppBuild is obtained.  See zAppBuildStatic.
+
+def zAppBuildgitURL           = "git@<url>/dbb-zappbuild.git"
+def zAppBuildBranch           = "main"
+def zAppBuildgitCredId        = "<pat>"
+def zAppBuildDoCheckout       = true
+def zAppBuildProject          = "dbb-zappbuild"
+def zAppBuildVerbose          = ""
+
+def zAppBuildStatic           = false
+def zAppBuildInstall          = "<path>/dbb-zappbuild"
+
+def zAppBuild                 = ""
+def zAppPkg                   = ""
+
+// Application
+//
+//   Variables that pertain to the application being built, how it is obtained and where it is located.
+//   There are two (2) methods supported.
+//
+//   1. Jenkins Default Checkout (Preferred).
+//   2. Scripted Checkout (Used for Debugging).
+//
+//     AppgitURL              - Repository URL. Required if performing the Scripted Checkout Mothod (AppDoCheckout=true).
+//                              Otherwise, will be set by Jenkins GIT_URL Environmental Variable if the Jenkins
+//                              Default Checkout method is used.
+//     AppBranch              - Branch Name. Required if performing the Scripted Checkout Mothod (AppDoCheckout=true).
+//                              set by Jenkins GIT_BRANCH Environmental Variable if the Jenkins Default Checkout
+//                              method is used.  (Default="main")
+//     AppDoCheckout          - If true, skip Jenkins Default Checkout.  Will trigger a Scripted Checkout to
+//                              Clone Application Repository.
+//     AppProject             - Name of the Application Project Folder under the Pipeline Workspace Directory.
+//                              (i.e., Pipeline Name/Branch).  This is where the Application Repository will be cloned.
+//     AppName                - Name of the Application folder within the application repository.
+//     AppHLQ                 - Build destination High-Level Qualifier.  Where "<lvl>" is a symbolic that will
+//                              be set to a desire mid-level qualifier based on the branch.  Supported mid-level
+//                              qualifiers are:
+//
+//                                MIG  - Base (master/main) branch after application migration from z/OS
+//                                PROD - Production
+//                                REL  - Release
+//                                DEV  - Development
+//
+//     AppBuildType           - Type of Build.  Set later on based on Application Branch being processed.
+//     AppBaseLineRefFileName - File Name of the Application Baseline Reference File Name.
+//     AppBaseLineRefFile     - Location of the Application Baseline Reference File. Path and name will be set
+//                              later on based on the DBB Workspace and Build Number.
+
+def AppgitURL                 = "git@<url>/poc-workspace.git"
+def AppBranch                 = "main"
+def AppDoCheckout             = true
+def AppProject                = "poc-workspace"
+def AppName                   = "poc-app"
+def AppHLQ                    = "<hlq>.MULTIBR.BUILD.<lvl>"
+def AppBuildType              = ""
+def AppBaseLineRefFileName    = "BaseLineRef.txt"
+def AppBaseLineRefFile        = ""
+
+// Dependency Based Build
+//
+//   Variables that pertain to the application build using IBM Dependency Based Build.
+//
+//     DBBDoBuild             - If true, perform the DBB Build.
+//     DBBWorkDir             - Working Directory root folder for build output. Set later on base on the
+//                              Pipeline Working Directory and Build Number.
+//     DBBMetaDataDb2         - If true, use Db2 to stow the DBB Metadata. Otherwise, if false, write
+//                              DBB Metadata to user root location. Applies to DBB Toolkit 2.0.0 and above.
+//                              Currently set to false for initial migration testing. Should be changed to
+//                              true for productions.
+//     DBBMetaDataURL         - Db2 JDBC URL for the Metadate Store (Ex: jdbc:db2:<Db2 server location>)
+//                              Required for DBB Toolkit 2.0.0 and above, along with DBBMetaDataDb2 equal true.
+//     DBBMetaDataUserid      - Db2 User Identifier used to access the Metadate Store. Required for
+//                              DBB Toolkit 2.0.0 and above, along with DBBMetaDataDb2 equal true.
+//     DBBMetaDataPwd         - Db2 Password used to access the Metadata Store. Required for
+//                              DBB Toolkit 2.0.0 and above, along with DBBMetaDataDb2 equal true.
+//     DBBMetaDataAccess      - Metadata Store access string passed to the DBB Build script. Set later on
+//                              based on the DBB Toolkit version.
+
+def DBBDoBuild                = true
+def DBBWorkDir                = ""
+def DBBMetaDataDb2            = false  // For initial migration testing.  Preferred production is true.
+def DBBMetaDataURL            = "jdbc:db2:<Db2 server location>"
+def DBBMetaDataUserid         = "<userid>"
+def DBBMetaDataPwd            = "<pwd>"
+def DBBMetaDataAccess         = ""
+
+// Types of Builds
+// Note: DBBuserBuild and DBBuserBuildArtifact are initial intended for Installation Verification
+//       debug purposes. Typically not used for a pipeline build.
+
+def DBBimpactBuild            = "--impactBuild"
+def DBBfullBuild              = "--fullBuild"
+def DBBscanAll                = "--scanAll"
+def DBBbaselineRef            = "--baselineRef"
+
+// Jenkins
+//
+//   Variables that pertain to Jenkins.
+//
+//     PipeLineName           - Supplied by Jenkins JOB_NAME Environmental Variable.
+//     BuildNumber            - Supplied by Jenkins BUILD_NUMBER Environemntal Variable. Value will be
+//                              eight (8) characters in length, padded to the left with zeros (0)
+
+def PipeLineName              = ""
+def BuildNumber               = ""
+
+// UrbanCode Deploy
+//
+//   Variables that pertain to the Package and Deploy using UrbanCode Deploy.
+//
+//     ucdURL                 - UCD Server URL
+//     ucdSite                - UCD Profile Name defined in Jenkins System Configuration
+//     ucdApplication         - UCD Application
+//     ucdApplicationProcess  - UCD Application Process
+//     ucdProcess             - UCD Process
+//     ucdComponent           - UCD Component
+//     ucdResource            - UCD Resource
+//     ucdEnvironment         - UCD Environment Prefix. The Environment Name will be updated later to contain
+//                              this prefix value, along with the name of the Branch being processed in
+//                              the format of "ucdEnvironment-branchname", where branch name is:
+//
+//                                Master
+//                                Production
+//                                Release
+//                                Development
+//
+//     ucdVersionName         - UCD Artfactory Package Prefix. The Version Name will be updated later to contain
+//                              this prefix value, along with the name of the Branch being processed and the
+//                              build number in the format of "ucdVersionName-branchname-buildnumber", where
+//                              branch name is:
+//
+//                                Master
+//                                Production
+//                                Release
+//                                Development
+//
+//     ucdBuzTool             - Location of the buztool shell script. Path and name will be set later on based
+//                              on where zAppBuild is obtained.  See zAppBuildStatic.
+//     ucdDoPackaging         - If true, perform the Packaging.
+//     ucdDoDeployment        - If true, perform the Deployment.
+//     ucdDeploymentLogName   - File Name of the UCD Deployment Log.
+//     ucdDeploymentLog       - Location of the UCD Deployment Log. Path and name will be set later on based on
+//                              the DBB Workspace and Build Number.
+//     ucdBuzToolLogName      - File Name of the Packaging Log.
+//     ucdBuzToolLog          - Location of the Packaging Log. Path and name will be set later on based on
+//                              the DBB Workspace and Build Number.
+//     ucdDoPackaging         - Package Switch. Controls whether the packaging step should be executed.
+//     ucdDoDeployment        - Deployment Switch. Controls whether the deployment step should be executed.
+
+def ucdURL                    = "https://<url>:8443"
+def ucdSite                   = "<url>"
+def ucdApplication            = "POC-Application"
+def ucdApplicationProcess     = "POC-Application-Process"
+def ucdProcess                = "POC-Process"
+def ucdComponent              = "POC-Component"
+def ucdResource               = "POC-Resource"
+def ucdEnvironment            = "POC-Environment"
+def ucdVersionName            = "POC-Version"
+
+def ucdBuzTool                = ""                    // Set later based on where zAppBuild is obtained. See zAppBuildStatic.
+def ucdDeploymentLogName      = "ucd-deploy.log"      // Deployment Log Name
+def ucdDeploymentLog          = ""                    // Deployment Path and Log Name
+def ucdBuzToolLogName         = "buztool.log"         // Buztool Log Name
+def ucdBuzToolLog             = ""                    // Buztool Path and Log Name
+def ucdDoPackaging            = true                  // If true, perform Package Step
+def ucdDoDeployment           = false                 // If true, perform Deployment Step
+
+// Branch Controls
+//
+//   Variables that pertain to Repository Branches.
+//
+//     BranchBaseLineRefTool    - Location of the Get Baseline Reference groovy script. Path and name will be
+//                                set later on based on where zAppBuild is obtained.  See zAppBuildStatic.
+//     BranchBaseLineRefLogName - File Name of the Get Baseline Reference Log.
+//     BranchBaseLineRefLog     - Location of the Get Baseline Reference Log. Path and name will be set later on based on
+//                                the DBB Workspace and Build Number.
+//     BranchBaseLineTag        - Branch Baseline Reference Tag obtained from the Application Baseline Reference File.
+//     BranchOkay               - Process controls for Branches that have been defined.
+//     BranchDuration           - Signifies the type of the Branch. This value will be set later on. There are two type:
+//
+//                                  Long  - Indicates the branch is long living.
+//                                  Short - Indicates the branch is short living.
+
+def BranchBaseLineRefTool     = ""                 // Set later based on where zAppBuild is obtained. See zAppBuildStatic.
+def BranchBaseLineRefLogName  = "BaseLineRef.log"  // BaselineRefTool Log Name.
+def BranchBaseLineRefLog      = ""                 // BaseLineRefTool Path and Long Name
+def BranchBaseLineTag         = ""
+def BranchOkay                = false
+def BranchDuration            = ""                 // Duration of the branch.
+
+// Constants and Variables
+def BuildCmd                  = ""         // DBB Build Command
+def Buildrc                   = 0          // DBB Build Command Return Code
+def BuildOutputList           = ""         // List of timestamped directories under Jenkins Build Directory
+def BuildOutputDir            = ""         // DBB Build Output Directory (Discovered)
+def BuildFile                 = ""         // Will contain the contents of the DBB buildFile.txt
+def BuildHasFiles             = true       // DBB buildFile.txt indicates changed files.
+
+def PackageCmd                = ""         // Packaging Command
+def Packagerc                 = 0          // Packaging Command Return Code
+
+def autoCancelled             = false      // Cancellation Flag
+def DefaultEncoding           = "IBM-1047" // Default Encoding
+def Msg                       = ""         // Message String
+def MsgHdr                    = ""         // HTML Header String ID for Jenkins Build Log
+def StartDateTime             = ""         // Pipeline Start Date/Time
+
+// Debug Switches
+def DBBLogger                 = ""
+
+// Okay, Let's Begin
+StartDateTime = new Date()
+
+if (loggerConfig) {
+	if (DBBToolkitVRM < 200) {
+		// DBB Toolkit 1.n.n and below uses log4j2. Set path to log4j2.propertiess
+		DBBLogger = "-Dlog4j.configurationFile=file:./${AppProject}/${AppName}/application-conf/log4j2.properties"
+	} else {
+		// DBB Toolkit 2.n.n and higher uses Simple Logging Facade for Java (SLF4J). Set CLASSPATH to simplelogger.properties location
+		DBBLogger  = "-Dorg.slf4j.simpleLogger"
+		CLASSPATH = "${CLASSPATH}"
+		CLASSPATH = CLASSPATH.trim()
+		if ( CLASSPATH.length() == 0 ) {
+			CLASSPATH = "./${AppProject}/${AppName}/application-conf"
+		} else {
+			CLASSPATH = "./${AppProject}/${AppName}/application-conf:${CLASSPATH}"
+		}
+		// CLASSPATH will be exported in Setup stage
+	}
+}
+
+if (verbose) {
+	zAppBuildVerbose = "--verbose"
+}
+
+//
+// Pipeline - Begin the Pipeline.
+//
+pipeline {
+	agent { label JenkinsAgent }
+	options {
+		skipDefaultCheckout(AppDoCheckout)
+		checkoutToSubdirectory("${AppProject}")
+	}
+	environment {
+		GIT_TRACE       = 'false'               // Trace git for testing  true/false,1,2
+		GIT_TRACE_SETUP = 'false'               // really cool trace tools
+	}
+	
+	stages {
+		stage ('Setup') {
+			steps {
+				script {
+					println("${PipeLineName}[INFO]: Start Date/Time              = " + StartDateTime)
+					
+					if (pipeverbose) {
+						println("${PipeLineName}[INFO]:   Format yyyyMMdd.HHmmss.mmm = " + StartDateTime.format("yyyyMMdd.HHmmss.mmm"))
+					}
+					
+					// If DBB Tracing is enabled, set location simplelogger properties in the CLASSPATH Env Variable.
+					if (loggerConfig) {
+						if (DBBToolkitVRM >= 200) {  // Only applies to DBB Toolkit V2.0.0 and above
+							sh "export CLASSPATH=${CLASSPATH}"
+						}
+					}
+
+					// Set up Metadata Store Credentials. Only applies to DBB Toolkit V2.0.0 and above
+					if ( (DBBToolkitVRM >= 200) && (DBBMetaDataDb2 == true) ) {
+						DBBMetaDataAccess = "--id ${DBBMetaDataUserid} --pw ${DBBMetaDataPwd} --url ${DBBMetaDataURL}"
+					} else {
+						DBBMetaDataAccess = "" // Not required for DBB Toolkit prior to V2.0.0
+					}
+					
+					// Determine where zAppBuild is obtained, either from static location or cloned location.
+					if (zAppBuildStatic) {
+						zAppBuildDoCheckout   = false // Safety Measure to prevent static copy from getting deleted during clean up step.
+						zAppBuild             = "${zAppBuildInstall}/build.groovy"
+						zAppPkg               = "${zAppBuildInstall}/dbb-ucd-packaging.groovy"
+						ucdBuzTool            = "${zAppBuildInstall}/buztool.sh"
+						BranchBaseLineRefTool = "${zAppBuildInstall}/GetBaseLineRef.groovy"
+					} else {
+						zAppBuild             = "${zAppBuildProject}/build.groovy"
+						zAppPkg               = "${zAppBuildProject}/dbb-ucd-packaging.groovy"
+						ucdBuzTool            = "${zAppBuildProject}/buztool.sh"
+						BranchBaseLineRefTool = "${zAppBuildProject}/GetBaseLineRef.groovy"
+					}
+					
+					// If Jenkins Default Checkout requested for the Application, obtain the URL of the
+					// Repository and the Branch from Jenkins.  Otherwise use the default previously defined
+					// in AppgitURL and pick up the AppBranch from Jenkins.
+					if (AppDoCheckout == false) {
+						AppgitURL = "${env.GIT_URL}"
+						AppBranch = "${env.GIT_BRANCH}"
+					} else {
+						//AppgitURL = scm.GIT_URL
+						AppBranch = "${env.BRANCH_NAME}"
+					}
+					
+					// Fetch the Pipeline Name and Build Number.  Set up and format the DBB Working
+					// directory for the build results.
+					PipeLineName   = env.JOB_NAME.split("/")
+					PipeLineName   = PipeLineName[0]
+					BuildNumber    = "${env.BUILD_NUMBER}"
+					BuildNumber    = BuildNumber.padLeft(8,"0") // Make Build Directories easier to sort
+					
+					DBBWorkDir     = "${WORKSPACE}/BUILD-${BuildNumber}" // DBB Build Results Root Directory
+					
+					// Based on the Branch, set up what type of processing should be performed.  Supported branches
+					// are:
+					//
+					//     master/main - Base branch after application migration from z/OS
+					//                   Used to perform validation testing of the build process using load modules.
+					//                   This branch is used as a historical archive.
+					//     production  - Production
+					//     release     - Release
+					//     development - Development
+					
+					Branch         = env.BRANCH_NAME.toUpperCase()
+					BranchOkay     = false
+					
+					if  ( (Branch.startsWith('MASTER') == true) || (Branch.startsWith('MAIN') == true) ) {
+						
+						BranchDuration = "Long"
+						
+						AppHLQ = AppHLQ.replaceAll("<lvl>","MIG") // Set correct Mid-Level Qualifier for Build Output
+
+						ucdVersionName = "${ucdVersionName}-Master-${BuildNumber}" // Package Version Name
+						ucdEnvironment = "${ucdEnvironment}-Master" // Deployment Environment
+						
+						if (env.BUILD_NUMBER.toInteger() == 1) {
+							AppBuildType    = "${DBBfullBuild}"
+							DBBDoBuild      = true   // Perform DBB Build
+							ucdDoPackaging  = false  // Do Not Perform the Packaging
+							ucdDoDeployment = false  // Do Not Perform the Deployment
+
+						} else {
+							AppBuildType    = "${DBBimpactBuild}"
+							DBBDoBuild      = true   // Perform DBB Build
+							ucdDoPackaging  = false  // Do Not Perform the Packaging
+							ucdDoDeployment = false  // Do Not Perform the Deployment
+						}
+
+						BranchOkay = true
+					}
+					if  (Branch.startsWith('PROD') == true) {
+						
+						BranchDuration = "Long"
+						
+						AppHLQ = AppHLQ.replaceAll("<lvl>","PROD") // Set correct Mid-Level Qualifier for Build Output
+
+						ucdVersionName = "${ucdVersionName}-Production-${BuildNumber}" // Package Version Name
+						ucdEnvironment = "${ucdEnvironment}-Production" // Deployment Environment
+						
+						if (env.BUILD_NUMBER.toInteger() == 1) {
+							AppBuildType    = "${DBBimpactBuild} ${DBBscanAll}"
+							DBBDoBuild      = true   // Perform DBB Build
+							ucdDoPackaging  = false  // Perform the Packaging
+							ucdDoDeployment = false  // Perform the Deployment
+						} else {
+							AppBuildType    = "${DBBimpactBuild} ${DBBscanAll}"
+							DBBDoBuild      = true   // Perform DBB Build
+							ucdDoPackaging  = false  // Do Not Perform the Packaging
+							ucdDoDeployment = false  // Do Not Perform the Deployment
+						}
+												
+						BranchOkay = true
+					}
+					if  (Branch.startsWith('REL') == true) {
+						
+						BranchDuration = "Short"
+						
+						AppHLQ = AppHLQ.replaceAll("<lvl>","REL") // Set correct Mid-Level Qualifier for Build Output
+
+						ucdVersionName = "${ucdVersionName}-Release-${BuildNumber}" // Package Version Name
+						ucdEnvironment = "${ucdEnvironment}-Release" // Deployment Environment
+												
+						if (env.BUILD_NUMBER.toInteger() == 1) {
+							AppBuildType    = "${DBBimpactBuild}"
+							DBBDoBuild      = true   // Perform DBB Build
+							ucdDoPackaging  = true   // Perform the Packaging
+							ucdDoDeployment = true   // Perform the Deployment
+						} else {
+							AppBuildType    = "${DBBimpactBuild}"
+							DBBDoBuild      = true   // Perform DBB Build
+							ucdDoPackaging  = true   // Perform the Packaging
+							ucdDoDeployment = true   // Perform the Deployment
+						}
+
+						BranchOkay = true
+					}
+					if  (Branch.startsWith('DEV') == true) {
+						
+						BranchDuration = "Long"
+						
+						AppHLQ = AppHLQ.replaceAll("<lvl>","DEV") // Set correct Mid-Level Qualifier for Build Output
+
+						ucdVersionName = "${ucdVersionName}-Development-${BuildNumber}" // Package Version Name
+						ucdEnvironment = "${ucdEnvironment}-Development" // Deployment Environment
+
+						if (env.BUILD_NUMBER.toInteger() == 1) {
+							AppBuildType    = "${DBBfullBuild}"
+							DBBDoBuild      = true   // Perform DBB Build
+							ucdDoPackaging  = false  // Do Not Perform the Packaging
+							ucdDoDeployment = false  // Do Not Perform the Deployment
+						} else {
+							AppBuildType    = "${DBBimpactBuild}"
+							DBBDoBuild      = true   // Perform DBB Build
+							ucdDoPackaging  = false  // Do Not Perform the Packaging
+							ucdDoDeployment = false  // Do Not Perform the Deployment
+						}
+
+						BranchOkay = true
+					}
+					
+					// If Branch Proceesing has not been defined, gracefully terminate the Pipeline
+					if (BranchOkay == false) {
+						autoCancelled       = true
+						AppBuildType        = "N/A - Pipeline Branch Process has not been defined."
+						zAppBuildDoCheckout = false
+						AppDoCheckout       = false
+						DBBDoBuild          = false
+						ucdDoPackaging      = false
+						ucdDoDeployment     = false
+					}
+
+					// If performing a DBB User Build, there is no Database MetaData.  Therefore, it cannot be Packaged or Deployed
+					if (AppBuildType == DBBuserBuild) {
+						ucdDoPackaging      = false
+						ucdDoDeployment     = false
+					}
+					
+					println("${PipeLineName}[INFO]: AppBranch = ${AppBranch} AppBuildType = ${AppBuildType}.")
+					
+				}
+			}
+		} // End: stage ('Setup')
+		stage ('Parameters and Values') {
+			steps {
+				script {
+					println("**************************************************************")
+					println("* Parameters and Variable Values")
+					println("*")
+					println("*   Jenkins")
+					println("*     env.JOB_NAME            : ${env.JOB_NAME}")
+					println("*     env.GIT_URL             : ${env.GIT_URL}")
+					println("*     env.GIT_BRANCH          : ${env.GIT_BRANCH}")
+					println("*     env.BRANCH_NAME         : ${env.BRANCH_NAME}")
+					println("*     env.BUILD_NUMBER        : ${env.BUILD_NUMBER}")
+					println("*     env.CHANGE_URL          : ${env.CHANGE_URL}")
+					println("*     WORKSPACE               : ${WORKSPACE}")
+					println("*     BuildNumber             : ${BuildNumber}")
+					println("*     PipeLineName            : ${PipeLineName}")
+					println("*     JenkinsAgent            : ${JenkinsAgent}")
+					println("*")
+					println("*   DBB Toolkit")
+					println("*     DBBToolkitVRM           : ${DBBToolkitVRM}")
+					println("*     DBBToolkitRoot          : ${DBBToolkitRoot}")
+					println("*     DBBToolkitVersDir       : ${DBBToolkitVersDir}")
+					println("*     DBBgroovyz              : ${DBBgroovyz}")
+					println("*     DBBLogger               : ${DBBLogger}")
+					println("*")
+					println("*   zAppBuild")
+					println("*     zAppBuildgitURL         : ${zAppBuildgitURL}")
+					println("*     zAppBuildBranch         : ${zAppBuildBranch}")
+					println("*     zAppBuildgitCredId      : ${zAppBuildgitCredId}")
+					println("*     zAppBuildDoCheckout     : ${zAppBuildDoCheckout}")
+					println("*     zAppBuildProject        : ${zAppBuildProject}")
+					println("*     zAppBuildVerbose        : ${zAppBuildVerbose}")
+					println("*     zAppBuildStatic         : ${zAppBuildStatic}")
+					println("*     zAppBuildInstall        : ${zAppBuildInstall}")
+					println("*     zAppBuild               : ${zAppBuild}")
+					println("*     zAppPkg                 : ${zAppPkg}")
+					println("*")
+					println("*   Application")
+					println("*     AppgitURL               : ${AppgitURL}")
+					println("*     AppBranch               : ${AppBranch}")
+					println("*     AppDoCheckout           : ${AppDoCheckout}")
+					println("*     AppProject              : ${AppProject}")
+					println("*     AppName                 : ${AppName}")
+					println("*     AppHLQ                  : ${AppHLQ}")
+					println("*     AppBuildType            : ${AppBuildType}")
+					println("*     AppBaseLineRefFileName  : ${AppBaseLineRefFileName}")
+					println("*")
+					println("*   Branch Controls")
+					println("*     BranchBaseLineRefTool   : ${BranchBaseLineRefTool}")
+					println("*     BranchBaseLineRefLogName: ${BranchBaseLineRefLogName}")
+					println("*     BranchDuruation         : ${BranchDuration}")
+					println("*")
+					println("*   DBB")
+					println("*     DBBDoBuild              : ${DBBDoBuild}")
+					println("*     DBBWorkDir              : ${DBBWorkDir}")
+					println("*     DBBuserBuildArtifact    : ${DBBuserBuildArtifact} (For User Build, Only)")
+					println("*     DBBMetaDataDb2          : ${DBBMetaDataDb2}")
+					println("*     DBBMetaDataURL          : ${DBBMetaDataURL}")
+					println("*     DBBMetaDataUserid       : ${DBBMetaDataUserid}")
+					println("*     DBBMetaDataPwd          : ${DBBMetaDataPwd}")
+					println("*")
+					println("*   UCD")
+					println("*     ucdURL                  : ${ucdURL}")
+					println("*     ucdSite                 : ${ucdSite}")
+					println("*     ucdApplication          : ${ucdApplication}")
+					println("*     ucdApplicationProcess   : ${ucdApplicationProcess}")
+					println("*     ucdProcess              : ${ucdProcess}")
+					println("*     ucdComponent            : ${ucdComponent}")
+					println("*     ucdEnvironemnt          : ${ucdEnvironment}")
+					println("*     ucdResource             : ${ucdResource}")
+					println("*     ucdVersionName          : ${ucdVersionName}")
+					println("*     ucdBuzTool              : ${ucdBuzTool}")
+					println("*     ucdDeploymentLogName    : ${ucdDeploymentLogName}")
+					println("*     ucdBuzToolLogName       : ${ucdBuzToolLogName}")
+					println("*     ucdDoPackaging          : ${ucdDoPackaging}")
+					println("*     ucdDoDeployment         : ${ucdDoDeployment}")
+					println("*")
+					println("*   General")
+					println("*     DefaultEncoding         : ${DefaultEncoding}")
+					println("*     autoCancelled           : ${autoCancelled}")
+					println("*")
+					println("*   Environmental")
+					println("*     HOME                    : ${HOME}")
+					println("*     DBB_HOME                : ${DBB_HOME}")
+					println("*     DBB_CONF                : ${DBB_CONF}")
+					println("*     GROOVY_HOME             : ${GROOVY_HOME}")
+					println("*     CLASSPATH               : ${CLASSPATH}")
+					println("*     PATH                    : ${PATH}")
+					println("*     JAVA_HOME               : ${JAVA_HOME}")
+					println("*     JENKINS_HOME            : $JENKINS_HOME")
+					println("*")
+					println("**************************************************************")
+				}
+			}
+		} // End: stage ('Parameters and Values')
+
+		stage ('Cleanup Workspace') {
+			when {
+				expression { return (autoCancelled == false) }
+			}
+			steps {
+				script {
+					if (pipeverbose) {
+						println("${PipeLineName}[DEBUG]: Cleanup before deletes.")
+
+						dir("${WORKSPACE}") {
+							sh "pwd ; ls -al"
+						}
+					}
+					
+					if (zAppBuildDoCheckout) {
+						dir("${WORKSPACE}/${zAppBuildProject}") { deleteDir() }
+						dir("${WORKSPACE}/${zAppBuildProject}@tmp") { deleteDir() }
+					}
+					
+					if (AppDoCheckout) { // Bypass if skipDefaultCheckout(false). Has already been checkout by Jenkins
+						dir("${WORKSPACE}/${AppProject}") { deleteDir() }
+					}
+					
+					dir("${WORKSPACE}/${AppProject}@tmp") { deleteDir() }
+					
+					if (pipeverbose) {
+						println("${PipeLineName}[DEBUG]: Cleanup after deletes.")
+
+						dir("${WORKSPACE}") {
+							sh "pwd ; ls -al"
+						}
+					}
+				}
+			}
+		} // End: stage ('Cleanup Workspace')
+
+		stage('Clone Application Repository') {
+			// If checkoutToSubdirectory is not set to a sub-folder under the Pipeline Workspace directory, the
+			// Application Checkout must be done first. Otherwise the checkout will overwrite contents of the
+			// Pipeline Workspace directory.
+			when {
+				// Bypass if skipDefaultCheckout(false)
+				expression { return ((AppDoCheckout == true) && (autoCancelled == false)) }
+			 }
+			steps {
+				script {
+					println("${PipeLineName}[INFO]: Checking out the ${AppBranch} branch of ${AppProject} Git Repository from ${AppgitURL}.")
+
+					// Checkout the Application repository to the Application Project Folder under the Pipeline
+					// Workspace directory.
+					dir ("${AppProject}") {
+						scmVars = checkout([$class: 'GitSCM', branches: scm.branches,
+							doGenerateSubmoduleConfigurations: false,
+							submoduleCfg: [],
+							userRemoteConfigs: scm.userRemoteConfigs])
+
+					}
+					
+					if (pipeverbose) {
+						println("${PipeLineName}[DEBUG]: ${AppProject} scmVars            = ${scmVars}")
+						println("${PipeLineName}[DEBUG]: ${AppProject} scmVars.GIT_URL    = ${scmVars.GIT_URL}")
+						println("${PipeLineName}[DEBUG]: ${AppProject} scmVars.GIT_BRANCH = ${scmVars.GIT_BRANCH}")
+					}
+				}
+			}
+		} // stage('Clone Application Repository')
+		
+		stage('Clone Generic Build Solution Repository') {
+			when {
+				expression { return ((zAppBuildDoCheckout == true) && (autoCancelled == false)) }
+			}
+			steps {
+				script {
+					println("${PipeLineName}[INFO]: Checking out the ${zAppBuildBranch} branch of ${zAppBuildProject} Git Repository from ${zAppBuildgitURL}.")
+
+					// Checkout zAppBuild repository to the zAppBuild Project Folder under the Pipeline
+					// Workspace directory.
+					dir ("${zAppBuildProject}") {
+						scmVars = checkout([$class: 'GitSCM', branches: [[name: "${zAppBuildBranch}"]],
+							doGenerateSubmoduleConfigurations: false,
+							submoduleCfg: [],
+							userRemoteConfigs: [[credentialsId: "${zAppBuildgitCredId}", url: "${zAppBuildgitURL}"]]])
+					}
+					
+					if (pipeverbose) {
+						println("${PipeLineName}[DEBUG]: ${zAppBuildProject} scmVars            = ${scmVars}")
+						println("${PipeLineName}[DEBUG]: ${zAppBuildProject} scmVars.GIT_URL    = ${scmVars.GIT_URL}")
+						println("${PipeLineName}[DEBUG]: ${zAppBuildProject} scmVars.GIT_BRANCH = ${scmVars.GIT_BRANCH}")
+					}
+				}
+			}
+		} // End: stage('Clone zAppBuild Repository')
+
+		stage('Show Workspace') {
+			when {
+				expression { return ((pipeverbose == true) && (autoCancelled == false)) }
+			}
+			steps {
+				script {
+					println("${PipeLineName}[INFO]: Show Workspace Information.")
+					
+					dir("${WORKSPACE}") {sh "pwd ; ls -al"}
+					
+					dir("${WORKSPACE}/${AppProject}") {
+						sh "git status"
+						sh "git show -s --pretty=%D HEAD"
+					}
+					if (zAppBuildDoCheckout == true) {
+						dir("${WORKSPACE}/${zAppBuildProject}") {
+							sh "git status"
+							sh "git show -s --pretty=%D HEAD"
+						}
+					}
+				}
+			}
+		} // End: stage('Show Workspace')
+		stage('Build') {
+			when {
+				expression { return ((DBBDoBuild == true) && (autoCancelled == false)) }
+			}
+			steps {
+				script {
+					println("${PipeLineName}[INFO]: DBB Build Starting. AppBuildType = ${AppBuildType}.")
+					MsgHdr = "<strong>Build Step:</strong>"
+					
+					Buildrc = 0
+					
+					// If this branch is a short living branch, then a Baseline Reference tag must be obtained
+					// and added to overwrite the baselineHash hash in an impactBuild scenario.
+
+					if ( (BranchDuration == "Short") && (AppBuildType == "DBBimpactBuild") ) {
+						
+						AppBaseLineRefFile   = "${WORKSPACE}/${AppProject}/${AppName}/application-conf/${AppBaseLineRefFileName}"
+						BranchBaseLineRefLog = "${DBBWorkDir}/${BranchBaseLineRefLogName}"
+					
+						println("${PipeLineName}[INFO]: Branch BaseLineRef Log = ${BranchBaseLineRefLog}.")
+										
+						BuildCmd = "${DBBgroovyz} ${DBBLogger} ${BranchBaseLineRefTool} --branch ${AppBranch} --refFile ${AppBaseLineRefFile} ${zAppBuildVerbose}"
+					
+						println("${PipeLineName}[INFO]: Get BaseLine Reference Command = ${BuildCmd}")
+					
+						tee("${BranchBaseLineRefLog}") {
+						
+							Buildrc = sh(script: "${BuildCmd}", returnStatus: true)
+					
+						}
+					
+						if (Buildrc == 0) {
+							println("${PipeLineName}[INFO]: Gathering BaseLine Reference Tag.")
+							
+							// Locate the BaseLine Reference Tag in the output log.
+							def basepattern = java.util.regex.Pattern.compile("GetBaseLineRef.Tag -> (.*)")
+							def basematcher = basepattern.matcher(readFile("${BranchBaseLineRefLog}"))
+							if (basematcher.find()) {
+								BranchBaseLineTag = "${basematcher.group(1)}"
+								basematcher = null // Prevent java.io.NotSerializableException: java.util.regex.Matcher Exception
+								Msg = "BaseLine Referenence Tag = ${BranchBaseLineTag}"
+								println("${PipeLineName}[INFO]: ${Msg}")
+								createSummary icon:"accept.svg", text: "${MsgHdr} ${Msg}"
+							}
+							
+							if ( (BranchBaseLineTag != null) && (BranchBaseLineTag != "") ) {
+								AppBuildType = "${AppBuildType} ${DBBbaselineRef} ${BranchBaseLineTag}"
+							}
+
+						} else {
+							Msg = "Get Baseline Reference resulted in a return code=${Buildrc}. Refer to ${BranchBaseLineRefLogName}."
+							println("${PipeLineName}[WARN]: ${Msg}")
+							createSummary icon:"error.svg", text: "${MsgHdr} ${Msg}"
+						
+							currentBuild.result = "FAILURE" // Mark the job as failed
+						
+							ucdDoPackaging  = false // Do not package if nothing was built
+							ucdDoDeployment = false // Do not deploy if packaging failed
+						}
+					}
+					
+					if (Buildrc == 0) {
+						
+						if (pipeverbose) {
+							sh "echo ${PipeLineName}[DEBUG]: HOME        = ${HOME}"
+							sh "echo ${PipeLineName}[DEBUG]: DBB_HOME    = ${DBB_HOME}"
+							sh "echo ${PipeLineName}[DEBUG]: DBB_CONF    = ${DBB_CONF}"
+							sh "echo ${PipeLineName}[DEBUG]: GROOVY_HOME = ${GROOVY_HOME}"
+							sh "echo ${PipeLineName}[DEBUG]: CLASSPATH   = ${CLASSPATH}"
+						}
+						
+						BuildCmd = "${DBBgroovyz} ${DBBLogger} ${zAppBuild} --workspace ${WORKSPACE}/${AppProject} --hlq ${AppHLQ} --workDir ${DBBWorkDir} --application ${AppName} ${DBBMetaDataAccess} --logEncoding UTF-8 ${zAppBuildVerbose} ${AppBuildType}"
+					
+						println("${PipeLineName}[INFO]: Build Command = ${BuildCmd}")
+					
+						Buildrc = sh(script: "${BuildCmd}", returnStatus: true)
+
+						if (pipeverbose) {
+							sh "echo ${PipeLineName}[DEBUG]: HOME        = ${HOME}"
+							sh "echo ${PipeLineName}[DEBUG]: DBB_HOME    = ${DBB_HOME}"
+							sh "echo ${PipeLineName}[DEBUG]: DBB_CONF    = ${DBB_CONF}"
+							sh "echo ${PipeLineName}[DEBUG]: GROOVY_HOME = ${GROOVY_HOME}"
+							sh "echo ${PipeLineName}[DEBUG]: CLASSPATH   = ${CLASSPATH}"
+						}
+
+						// There could be multiple timestamped DBB Build directories from previous runs under
+						// the Jenkins Build Number directory.  Make sure the past one is picked up
+						BuildOutputDirList = sh (script: "ls ${DBBWorkDir}", returnStdout: true).tokenize("\n")
+					
+						if (pipeverbose) {
+							// Show the list of DBB Build Directories
+							dir ("${DBBWorkDir}") {
+								sh "pwd ; ls"
+							}
+							println("${PipeLineName}[DEBUG]: Build Output Folder List = ${BuildOutputDirList}")
+						}
+
+						BuildOutputDir = BuildOutputDirList.last() // Get the last one per timestamp
+										
+						println("${PipeLineName}[INFO]: Build Output Folder = ${BuildOutputDir}")
+					
+						if (pipeverbose) {
+							// Show the contents of the DBB Build Directory
+							dir ("${DBBWorkDir}/${BuildOutputDir}") {
+								sh "pwd ; ls -alT"
+							}
+						}
+					
+						// Check to see if the build has any files
+						if (Buildrc == 0) {
+						
+							//	BuildFile = findFiles(glob: "**BUILD-${BuildNumber}/**/buildList.txt")
+							dir ("${DBBWorkDir}") {
+								BuildFile = findFiles(glob: "**${BuildOutputDir}/buildList.txt")
+							}
+						
+							if (pipeverbose) {
+								println("${PipeLineName}[DEBUG]: BuildFile           = " + BuildFile)
+								println("${PipeLineName}[DEBUG]: BuildFile.length    = " + BuildFile.length)
+								println("${PipeLineName}[DEBUG]: BuildFile[0].length = " + BuildFile[0].length)
+							}
+						
+							BuildHasFiles = (BuildFile.length > 0) && (BuildFile[0].length > 0)
+						
+							if (BuildHasFiles) {
+								Msg     = "Build resulted in updated files. AppBuildType = ${AppBuildType}"
+								println("${PipeLineName}[INFO]: ${Msg}")
+								createSummary icon:"accept.svg", text: "${MsgHdr} ${Msg}"
+							} else {
+								Buildrc = 4
+								Msg     = "Build resulted in no updated files. AppBuildType = ${AppBuildType}"
+								println("${PipeLineName}[WARN]: ${Msg}")
+								createSummary icon:"warning.svg", text: "${MsgHdr} ${Msg}"
+								ucdDoPackaging  = false // Do not package if nothing was built
+								ucdDoDeployment = false // Do not deploy is nothing was built
+							}
+						} else {
+							Msg = "Build resulted in a return code=${Buildrc}. Refer to Jenkins Console Output Log."
+							println("${PipeLineName}[WARN]: ${Msg}")
+							createSummary icon:"error.svg", text: "${MsgHdr} ${Msg}"
+						
+							currentBuild.result = "FAILURE" // Mark the job as failed
+						
+							ucdDoPackaging  = false // Do not package if nothing was built
+							ucdDoDeployment = false // Do not deploy is nothing was built
+						}
+					}
+				}
+			}
+			post {
+				always {
+					// Pick up the Baseline Reference Tool Console Output (STDOUT)
+					dir ("${DBBWorkDir}") {
+						archiveArtifacts allowEmptyArchive: true,
+							artifacts: '*.log',
+							onlyIfSuccessful: false
+					}
+					// Pick up files created by the build
+					dir ("${DBBWorkDir}/${BuildOutputDir}") {
+						archiveArtifacts allowEmptyArchive: true,
+							artifacts: '*.log,*.json,*.html,*.txt',
+							excludes: '*clist',
+							onlyIfSuccessful: false
+					}
+				}
+			}
+		} // End: stage('Build')
+
+		stage('Packaging') {
+			when {
+				expression { return ((ucdDoPackaging == true) && (autoCancelled == false)) }
+			}
+			steps {
+				script {
+					println("${PipeLineName}[INFO]: Packaging Starting.")
+					MsgHdr = "<strong>Packaging Step:</strong>"
+
+					ucdBuzToolLog = "${DBBWorkDir}/${ucdBuzToolLogName}"
+
+					println("${PipeLineName}[INFO]: BuzTool Log = ${ucdBuzToolLog}.")
+					
+					PackageCmd = "${DBBgroovyz} ${DBBLogger} ${zAppPkg} --buztool ${ucdBuzTool} --component ${ucdComponent} --workDir ${DBBWorkDir}/${BuildOutputDir} --versionName ${ucdVersionName}"
+					
+					println("${PipeLineName}[INFO]: Package Command = ${PackageCmd}")
+					
+					tee("${ucdBuzToolLog}") {
+						
+						Packagerc = sh(script: "${PackageCmd}", returnStatus: true)
+					}
+
+					if (Packagerc == 0) {
+
+						// Create a copy with the correct encoding so it will be viewable in the Jenkins Job Log
+						dir ("${DBBWorkDir}/${BuildOutputDir}") {
+							sh "iconv -f ${DefaultEncoding} -t UTF-8 < shiplist.xml > shiplist-utf-8.xml"
+							sh "chtag -c UTF-8 shiplist-utf-8.xml"
+						}
+						
+						println("${PipeLineName}[INFO]: Gathering UCD Component Version URL.")
+						
+						// Locate the UCD Component Version URL in the output log.
+						def buzpattern = java.util.regex.Pattern.compile("version.url -> (.*)")
+						def buzmatcher = buzpattern.matcher(readFile("${ucdBuzToolLog}"))
+						if (buzmatcher.find()) {
+							def buzrequestURL = "${buzmatcher.group(1)}"
+							buzmatcher = null // Prevent java.io.NotSerializableException: java.util.regex.Matcher Exception
+							println("${PipeLineName}[INFO]: UCD Component Version: ${buzrequestURL}")
+							createSummary icon:"accept.svg", text: "${MsgHdr} <a href=\'$buzrequestURL\' target=\'_other\'>UCD Component Version</a>"
+						}
+					} else {
+						Msg = "Packaging resulted in a return code=${Packagerc}. Refer to ${ucdBuzToolLogName}."
+						println("${PipeLineName}[WARN]: ${Msg}")
+						createSummary icon:"error.svg", text: "${MsgHdr} ${Msg}"
+						
+						currentBuild.result = "FAILURE" // Mark the job as failed
+						
+						ucdDoDeployment = false // Do not deploy if packaging failed
+					} // End of if (Packagerc == 0)
+					
+					if (pipeverbose) {
+						dir ("${DBBWorkDir}/${BuildOutputDir}") {
+							sh "pwd ; ls -alT"
+						}
+					}
+				}
+			}
+			post {
+				always {
+					// Pick up the Packaging Tool Console Output (STDOUT)
+					dir ("${DBBWorkDir}") {
+						archiveArtifacts allowEmptyArchive: true,
+							artifacts: '*.log',
+							onlyIfSuccessful: false
+					}
+					// Pick up the files created by the packaging
+					dir ("${DBBWorkDir}/${BuildOutputDir}") {
+						archiveArtifacts allowEmptyArchive: true,
+							artifacts: '*.xml,*.log',
+							excludes: '*clist',
+							onlyIfSuccessful: false
+					}
+				}
+			}
+		} // End: stage('Packaging')
+
+		stage('Deployment') {
+			when {
+				expression { return ((ucdDoDeployment == true) && (autoCancelled == false)) }
+			}
+			steps {
+				script {
+					println("${PipeLineName}[INFO]: Deployment Starting.")
+					MsgHdr = "<strong>Deployment Step:</strong>"
+
+					if (BuildHasFiles) {
+						script {
+							ucdDeploymentLog = "${DBBWorkDir}/${ucdDeploymentLogName}"
+							println("${PipeLineName}[INFO]: UCD Deployment Log = ${ucdDeploymentLog}")
+							
+							tee("${ucdDeploymentLog}") {
+								step(
+									[$class: "UCDeployPublisher",
+										deploy: [
+										deployApp: ucdApplication,
+										deployDesc: "Requested from Jenkins",
+										deployEnv: ucdEnvironment,
+										deployOnlyChanged: false,
+										deployProc: ucdApplicationProcess,
+										deployVersions: ucdComponent + ":${ucdVersionName}"],
+									siteName: ucdSite])
+							}
+							
+							println("${PipeLineName}[INFO]: Gathering UCD Deployment Request URL.")
+							
+							// Locate the UCD Deployment Request URL in the output log.
+							def ucdpattern = java.util.regex.Pattern.compile("UrbanCode Deploy deployment logs for details : (.*)")
+							def ucdmatcher = ucdpattern.matcher(readFile("${ucdDeploymentLog}"))
+							if (ucdmatcher.find()) {
+								def ucdrequestURL = "${ucdmatcher.group(1)}"
+								ucdmatcher = null // Prevent java.io.NotSerializableException: java.util.regex.Matcher Exception
+								println("${PipeLineName}[INFO]: UCD Deployment Request: ${ucdrequestURL}")
+								createSummary icon:"accept.svg", text: "${MsgHdr} <a href=\'$ucdrequestURL\' target=\'_other\'>UCD Deployment Request</a>"
+							}
+						}
+					}
+
+					if (pipeverbose) {
+						dir ("${DBBWorkDir}/${BuildOutputDir}") {
+							sh "pwd ; ls -alT"
+						}
+					}
+				}
+			}
+			post {
+				always {
+					// Pick up the Deployment Console Output (STDOUT)
+					dir ("${DBBWorkDir}") {
+						archiveArtifacts allowEmptyArchive: true,
+							artifacts: '*.log',
+							excludes: '*clist',
+							onlyIfSuccessful: false
+					}
+				}
+			}
+		} // End: stage('Deployment')
+		stage ('Final Workspace Cleanup') {
+			when {
+				expression { return (autoCancelled == false) }
+			}
+			steps {
+				script {
+					if (pipeverbose) {
+						println("${PipeLineName}[DEBUG]: Final Cleanup before deletes.")
+
+						dir("${WORKSPACE}") {
+							sh "pwd ; ls -al"
+						}
+					}
+					
+					dir("${WORKSPACE}/${zAppBuildProject}@tmp") { deleteDir() }
+					
+					dir("${WORKSPACE}/${AppProject}@tmp") { deleteDir() }
+
+					if (pipeverbose) {
+						println("${PipeLineName}[DEBUG]: Final Cleanup after deletes.")
+
+						dir("${WORKSPACE}") {
+							sh "pwd ; ls -al"
+						}
+					}
+				}
+			}
+		} // End: stage ('Final Cleanup')
+	} // End: stages
+} // End: pipeline
