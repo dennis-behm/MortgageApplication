@@ -67,9 +67,9 @@ def DBBgroovyz                = "${DBBToolkitRoot}/${DBBToolkitVersDir}/bin/groo
 //     zAppPkg                - Location of the UCD Packaging groovy script. Path and name will be set later on based
 //                              on where zAppBuild is obtained.  See zAppBuildStatic.
 
-def zAppBuildgitURL           = "git@<url>/dbb-zappbuild.git"
+def zAppBuildgitURL           = "git@github.com:IBM/dbb-zappbuild.git"
 def zAppBuildBranch           = "main"
-def zAppBuildgitCredId        = "<pat>"
+def zAppBuildgitCredId        = "none"
 def zAppBuildDoCheckout       = true
 def zAppBuildProject          = "dbb-zappbuild"
 def zAppBuildVerbose          = ""
@@ -113,12 +113,12 @@ def zAppPkg                   = ""
 //     AppBaseLineRefFile     - Location of the Application Baseline Reference File. Path and name will be set
 //                              later on based on the DBB Workspace and Build Number.
 
-def AppgitURL                 = "git@<url>/poc-workspace.git"
+def AppgitURL                 = "https://github.ibm.com/zDevOps-Acceleration/MortgageApplication.git"
 def AppBranch                 = "main"
-def AppDoCheckout             = true
-def AppProject                = "poc-workspace"
-def AppName                   = "poc-app"
-def AppHLQ                    = "<hlq>.MULTIBR.BUILD.<lvl>"
+def AppDoCheckout             = false
+def AppProject                = "app-workspace"
+def AppName                   = "MortgageApplication"
+def AppHLQ                    = "JENKINS.MULTIBR.BUILD.<lvl>"
 def AppBuildType              = ""
 def AppBaseLineRefFileName    = "BaseLineRef.txt"
 def AppBaseLineRefFile        = ""
