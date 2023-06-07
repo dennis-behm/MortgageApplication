@@ -75,7 +75,7 @@ def zAppBuildProject          = "dbb-zappbuild"
 def zAppBuildVerbose          = ""
 
 // ability to pass a custom set of property files
-def zAppBuildConfig           = "--propFiles /var/dbb/dbb-zappbuild-config/build.properties,/var/dbb/dbb-zappbuild-config/datasets.properties,/var/jenkins/zappbuild_config/zappbuild.jenkins.properties"
+def zAppBuildConfig           = "--propFiles /var/dbb/dbb-zappbuild-config/build.properties,/var/dbb/dbb-zappbuild-config/datasets.properties,/var/jenkins/zappbuild_config/zappbuild.jenkins.properties --propOverwrites metadataStoreFileLocation=/var/jenkins/dbb-metadataStore-multibranch"
 
 def zAppBuildStatic           = false
 def zAppBuildInstall          = "<path>/dbb-zappbuild"
