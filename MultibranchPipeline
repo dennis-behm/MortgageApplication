@@ -74,6 +74,9 @@ def zAppBuildDoCheckout       = true
 def zAppBuildProject          = "dbb-zappbuild"
 def zAppBuildVerbose          = ""
 
+// ability to pass a custom set of property files
+def zAppBuildConfig           = "--propFiles /var/dbb/dbb-zappbuild-config/build.properties,/var/dbb/dbb-zappbuild-config/datasets.properties,/var/jenkins/zappbuild_config/zappbuild.jenkins.properties"
+
 def zAppBuildStatic           = false
 def zAppBuildInstall          = "<path>/dbb-zappbuild"
 
@@ -786,7 +789,7 @@ pipeline {
 							sh "echo ${PipeLineName}[DEBUG]: CLASSPATH   = ${CLASSPATH}"
 						}
 						
-						BuildCmd = "${DBBgroovyz} ${DBBLogger} ${zAppBuild} --workspace ${WORKSPACE}/${AppProject} --hlq ${AppHLQ} --workDir ${DBBWorkDir} --application ${AppName} ${DBBMetaDataAccess} --logEncoding UTF-8 ${zAppBuildVerbose} ${AppBuildType}"
+						BuildCmd = "${DBBgroovyz} ${DBBLogger} ${zAppBuild} --workspace ${WORKSPACE}/${AppProject} --hlq ${AppHLQ} --workDir ${DBBWorkDir} --application ${AppName} ${DBBMetaDataAccess} --logEncoding UTF-8 ${zAppBuildVerbose} ${zAppBuildConfig} ${AppBuildType}"
 					
 						println("${PipeLineName}[INFO]: Build Command = ${BuildCmd}")
 					
