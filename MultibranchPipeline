@@ -67,9 +67,9 @@ def DBBgroovyz                = "${DBBToolkitRoot}/${DBBToolkitVersDir}/bin/groo
 //     zAppPkg                - Location of the UCD Packaging groovy script. Path and name will be set later on based
 //                              on where zAppBuild is obtained.  See zAppBuildStatic.
 
-def zAppBuildgitURL           = "git@github.com:IBM/dbb-zappbuild.git"
+def zAppBuildgitURL           = "https://github.com/ibm/dbb-zappbuild.git"
 def zAppBuildBranch           = "main"
-def zAppBuildgitCredId        = "none"
+def zAppBuildgitCredId        = "ztec_201_jenkins_dbehm"
 def zAppBuildDoCheckout       = true
 def zAppBuildProject          = "dbb-zappbuild"
 def zAppBuildVerbose          = ""
