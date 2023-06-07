@@ -229,7 +229,7 @@ def ucdDeploymentLogName      = "ucd-deploy.log"      // Deployment Log Name
 def ucdDeploymentLog          = ""                    // Deployment Path and Log Name
 def ucdBuzToolLogName         = "buztool.log"         // Buztool Log Name
 def ucdBuzToolLog             = ""                    // Buztool Path and Log Name
-def ucdDoPackaging            = true                  // If true, perform Package Step
+def ucdDoPackaging            = false                  // If true, perform Package Step
 def ucdDoDeployment           = false                 // If true, perform Deployment Step
 
 // Branch Controls
