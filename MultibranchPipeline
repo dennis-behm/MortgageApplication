@@ -18,7 +18,7 @@ def pipeverbose               = true  // Enabled Pipeline Debug Messages (true/f
 //   JenkinsAgent             - Name of the Jenkins Agent where the pipelinewill execute in the Jenkins
 //                              environment.
 
-def JenkinsAgent              = "zOS-Agent"
+def JenkinsAgent              = "ztec-builder"
 
 // Dependency Based Build Toolkit
 //
@@ -30,9 +30,9 @@ def JenkinsAgent              = "zOS-Agent"
 //                              DBBToolkitRoot.  Useful if you run with multiple versions of the DBB Tookit
 //   DBBgroovyz               - Location of the groovyz script.
 
-def DBBToolkitVRM             = 113
-def DBBToolkitRoot            = "<path>/lpp/IBM"
-def DBBToolkitVersDir         = "dbb_1.1.3"
+def DBBToolkitVRM             = 200
+def DBBToolkitRoot            = "/usr/lpp/dbb"
+def DBBToolkitVersDir         = "v2r0"
 def DBBgroovyz                = "${DBBToolkitRoot}/${DBBToolkitVersDir}/bin/groovyz"
 
 // Generic Build Solution (zAppBuild)
