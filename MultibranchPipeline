@@ -307,7 +307,7 @@ pipeline {
 	agent { label JenkinsAgent }
 	options {
 		skipDefaultCheckout(AppDoCheckout)
-		checkoutToSubdirectory("${AppProject}")
+		checkoutToSubdirectory("${AppProject}/${AppName}") // while this copy of MortgageApp does not carry a root dir within the repo.
 	}
 	environment {
 		GIT_TRACE       = 'false'               // Trace git for testing  true/false,1,2
