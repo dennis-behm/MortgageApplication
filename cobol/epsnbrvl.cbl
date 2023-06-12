@@ -12,7 +12,7 @@
       *       INTEREST RATE
       *    OUTPUT:
       *       MONTHLY PAYMENT
-      *
+      * Test June 12
       *    (C) 2023 IBM - I was here too
        ENVIRONMENT DIVISION.
        CONFIGURATION SECTION.
