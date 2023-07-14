@@ -696,14 +696,16 @@ pipeline {
 					
 					dir("${WORKSPACE}") {sh "pwd ; ls -al"}
 					
-					dir("${WORKSPACE}/${AppProject}") {
-						sh "git status"
-						sh "git show -s --pretty=%D HEAD"
-					}
-					if (zAppBuildDoCheckout == true) {
+					
+					if (AppDoCheckout == true) {
 						dir("${WORKSPACE}/${zAppBuildProject}") {
 							sh "git status"
 							sh "git show -s --pretty=%D HEAD"
+						}
+					} else {
+						dir("${WORKSPACE}/${AppProject}/${AppName}") {
+						sh "git status"
+						sh "git show -s --pretty=%D HEAD"
 						}
 					}
 				}
