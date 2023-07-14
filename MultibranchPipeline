@@ -296,7 +296,7 @@ pipeline {
 	agent { label JenkinsAgent }
 	options {
 		skipDefaultCheckout(AppDoCheckout)
-		checkoutToSubdirectory("${AppProject}")
+		checkoutToSubdirectory("${AppProject}/${AppName}") // Added AppName for checkout dir of implizit checkout
 	}
 	environment {
 		GIT_TRACE       = 'false'               // Trace git for testing  true/false,1,2.
