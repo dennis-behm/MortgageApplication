@@ -161,7 +161,7 @@ def DBBMetaDataURL            = "jdbc:db2:dummy" // using the db2 conf file
 def DBBMetaDataUserid         = "DBEHM"
 def DBBMetaDataPwd            = "/var/dbb/config/db2-pwd-file.xml"
 def DBBMetaDataAccess         = ""
-def DBBPropFiles              = "--propFiles /var/dbb/dbb-zappbuild-config/build.properties,/var/dbb/dbb-zappbuild-config/datasets.properties,/var/dbb/dbb-zappbuild-config/dbb-db2-metadatastore-jenkins.properties" // fileStore: /var/dbb/dbb-zappbuild-config/dbb-db2-metadatastore-jenkins.properties
+def DBBPropFiles              = "--propFiles /var/dbb/dbb-zappbuild-config/build.properties,/var/dbb/dbb-zappbuild-config/datasets.properties,/var/jenkins/zappbuild_config/zappbuild.jenkins.properties" // fileStore: /var/dbb/dbb-zappbuild-config/dbb-db2-metadatastore-jenkins.properties
 
 // Types of Builds
 
@@ -224,15 +224,15 @@ def BuildNumber               = ""
 //     ucdDoPackaging         - Package Switch. Controls whether the packaging step should be executed.
 //     ucdDoDeployment        - Deployment Switch. Controls whether the deployment step should be executed.
 
-def ucdURL                    = "https://<url>:8443"
+def ucdURL                    = "https://ucd.dat.ibm.com:8443"
 def ucdSite                   = "<url>"
-def ucdApplication            = "POC-Application"
-def ucdApplicationProcess     = "POC-Application-Process"
+def ucdApplication            = "MortgageApplication2"
+def ucdApplicationProcess     = "appDeployment"
 def ucdProcess                = "POC-Process"
-def ucdComponent              = "POC-Component"
+def ucdComponent              = "MortgageApplication2"
 def ucdResource               = "POC-Resource"
-def ucdEnvironment            = "POC-Environment"
-def ucdVersionName            = "POC-Version"
+def ucdEnvironment            = ""
+def ucdVersionName            = "MortgageApplication"
 
 def ucdBuzTool                = ""                    // Set later based on where zAppBuild is obtained. See zAppBuildStatic.
 def ucdDeploymentLogName      = "ucd-deploy.log"      // Deployment Log Name.
@@ -340,7 +340,7 @@ pipeline {
 						zAppBuildDoCheckout   = false // Safety Measure to prevent static copy from getting deleted during clean up step.
 						zAppBuild             = "${zAppBuildInstall}/build.groovy"
 						zAppPkg               = "/var/dbb/extensions/dbb20/Pipeline/CreateUCDComponentVersion/dbb-ucd-packaging.groovy"
-						ucdBuzTool            = "$/buztool.sh"
+						ucdBuzTool            = "/var/ucd-agent/bin/buztool.sh"
 						BranchBaseLineRefTool = "/var/dbb/extensions/GetBaseLineRef.groovy"
 					} else {
 						zAppBuild             = "${zAppBuildProject}/build.groovy"
@@ -442,7 +442,7 @@ pipeline {
 						AppHLQ = AppHLQ.replaceAll("<lvl>","REL") // Set correct Mid-Level Qualifier for Build Output.
 
 						ucdVersionName = "${ucdVersionName}-Release-${BuildNumber}" // Package Version Name.
-						ucdEnvironment = "${ucdEnvironment}-Release" // Deployment Environment.
+						ucdEnvironment = "Integration-Test" // Deployment Environment.
 												
 						if (env.BUILD_NUMBER.toInteger() == 1) {
 							AppBuildType    = "${DBBimpactBuild}"

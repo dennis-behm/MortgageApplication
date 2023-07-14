@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<!--
+    Licensed Materials - Property of IBM
+    (c) Copyright IBM Corporation 2017, 2019. All Rights Reserved.
+
+    Note to U.S. Government Users Restricted Rights:
+    Use, duplication or disclosure restricted by GSA ADP Schedule
+    Contract with IBM Corp.
+ -->
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+<head>
+<title>IBM Dependency Based Build</title>
+<style type="text/css">
+
+body {
+    font: 12px Arial, sans-serif;
+}
+
+table {
+    border-collapse: collapse;
+}
+
+table, th, td {
+    border: 1px solid #A9A9A9;
+}
+
+th, td {
+    padding: 10px;
+    text-align: left;
+}
+
+tr.even {
+	background-color: #f2f2f2
+}
+
+th {
+    background-color: #ddd;
+    color: black !important;
+}
+
+td.label {
+	font-weight: bold;
+}
+
+span.vlabel {
+	float: left;
+	font-weight: bold;
+	width: 5em;
+	margin-left: 20px;
+}
+.bottomRight {
+   float:right;
+   text-align:right;
+   font: 10px Arial, sans-serif;
+}
+
+.dep {
+	font: 11px Arial, sans-serif;
+}
+
+.depType {
+	font: 9px Arial, sans-serif;
+	background-color: #81C4E8;
+}
+
+
+</style>
+</head>
+
+<body>
+<p id="main"><a class="offleft" href="#main">Main Content</a>
+</p>
+
+<script type="application/json" id="BuildReportData">
+
+{"records":[{"date":"28-Feb-2022 17:26:26","build":"151","id":"DBB API Version","type":"VERSION","version":"1.1.3"},{"build-mode":"NORMAL","id":"DBB Build Mode","type":"BUILD_MODE"},{"options":"cyl space(1,1) lrecl(80) dsorg(PO) recfm(F,B) dsntype(library)","exists":true,"id":"CREATE_PDS_1","type":"CREATE_PDS","dataset":"DBEHM.DBB.UB.COBOL"},{"options":"cyl space(1,1) lrecl(80) dsorg(PO) recfm(F,B) dsntype(library)","exists":true,"id":"CREATE_PDS_2","type":"CREATE_PDS","dataset":"DBEHM.DBB.UB.COPY"},{"options":"cyl space(1,1) lrecl(80) dsorg(PO) recfm(F,B) dsntype(library)","exists":true,"id":"CREATE_PDS_3","type":"CREATE_PDS","dataset":"DBEHM.DBB.UB.OBJ"},{"options":"cyl space(1,1) lrecl(80) dsorg(PO) recfm(F,B) dsntype(library)","exists":true,"id":"CREATE_PDS_4","type":"CREATE_PDS","dataset":"DBEHM.DBB.UB.DBRM"},{"options":"cyl space(1,1) dsorg(PO) recfm(U) blksize(32760) dsntype(library)","exists":true,"id":"CREATE_PDS_5","type":"CREATE_PDS","dataset":"DBEHM.DBB.UB.LOAD"},{"mode":"TEXT","destination":"DBEHM.DBB.UB.COBOL(EPSNBRVL)","id":"COPY_TO_PDS_1","source":"\/u\/dbehm\/userBuild\/MortgageApplication\/cobol\/epsnbrvl.cbl","type":"COPY_TO_PDS"},{"file":"MortgageApplication\/cobol\/epsnbrvl.cbl","id":"DEPENDENCY_SET_1","type":"DEPENDENCY_SET"},{"outputs":[{"dataset":"DBEHM.DBB.UB.OBJ(EPSNBRVL)"}],"rc":0,"file":"MortgageApplication\/cobol\/epsnbrvl.cbl","options":"LIB","id":"EXECUTE_1","datasets":["DBEHM.DBB.UB.COBOL(EPSNBRVL)"],"type":"EXECUTE","logs":["\/u\/dbehm\/userBuild\/work_zoe\/EPSNBRVL.log"],"command":"IGYCRCTL"},{"mode":"TEXT","destination":"\/u\/dbehm\/userBuild\/work_zoe\/EPSNBRVL.log","id":"COPY_TO_HFS_1","source":"SYSPRINT","type":"COPY_TO_HFS"}]}
+
+</script>
+
+<script type="text/javascript">
+var buildReport = JSON.parse(document.getElementById('BuildReportData').innerHTML);
+render();
+
+function toggle(dep, text)
+{
+	if (document.getElementById(text).text == 'Show Dependencies')
+		document.getElementById(text).text = 'Hide Dependencies';
+	else
+		document.getElementById(text).text = 'Show Dependencies';
+
+	if (document.getElementById(dep).style.display == 'none')
+		document.getElementById(dep).style.display = 'block';
+	else
+		document.getElementById(dep).style.display = 'none';
+};
+
+
+
+/*******************************************************************************
+ * Licensed Materials - Property of IBM
+ * (c) Copyright IBM Corporation 2018, 2019. All Rights Reserved.
+ *
+ * Note to U.S. Government Users Restricted Rights:
+ * Use, duplication or disclosure restricted by GSA ADP Schedule
+ * Contract with IBM Corp.
+ *******************************************************************************/
+ function render()
+ {
+         var tableHtml = "";
+         var jenkinsBuildHtml = "";
+         var cRecords = new Object();
+         var jenkinsWorkspace;
+         var jenkinsJobUrl;
+         var versionInfoHtml = "";
+         var dependencySetCache = new Object();
+         tableHtml += "<table><tr><th id=\"sequence\"></th><th id=\"file\">File</th><th id=\"commands\">Commands</th><th id=\"rc\">RC</th><th id=\"dataSets\">Data Sets</th><th id=\"outputs\">Outputs</th><th id=\"deployType\">Deploy Type</th><th id=\"logs\">Logs</th></tr>";
+         for (x in buildReport.records)
+         {
+             var record = buildReport.records[x];
+             if (record.type == "EXECUTE" || (record.type == "COPY_TO_PDS" && record.outputs))
+             {
+                 var cRecord = cRecords[record.file];
+                 if (!cRecord)
+                 {
+                     //Create new consolidate record
+                     cRecord = new Object();
+                     cRecord.file = record.file;
+                     cRecord.executors = [];
+                     cRecord.rcs = [];
+                     cRecord.datasets = [];
+                     cRecord.outputs = [];
+                     cRecord.deployTypes = [];
+                     cRecord.logs = [];
+                     cRecord.logFiles = []; /* maintain this to avoid having duplicated log files for each file */
+                     cRecords[record.file] = cRecord;
+                 }
+                 var numExecutors = cRecord.executors.length;
+                 cRecord.executors[numExecutors] = record.command;
+                 cRecord.rcs[numExecutors] = record.rc;
+                 cRecord.outputs[numExecutors] = "";
+                 cRecord.deployTypes[numExecutors] = "";
+                 for (z in record.outputs)
+                 {
+                     var output = record.outputs[z];
+                     if (cRecord.outputs[numExecutors].length > 0)
+                     {
+                         cRecord.outputs[numExecutors] += "<br>";
+                         cRecord.deployTypes[numExecutors] += "<br>";
+                     }
+                     cRecord.outputs[numExecutors] += output.dataset;
+                     if (output.deployType != null)
+                         cRecord.deployTypes[numExecutors] += output.deployType;
+                     else cRecord.deployTypes[numExecutors] += "&nbsp;";
+ 
+                 }
+                 cRecord.datasets[numExecutors] = "";
+                 for (m in record.datasets)
+                 {
+                     var dataset = record.datasets[m];
+                     if (cRecord.datasets[numExecutors].length > 0)
+                         cRecord.datasets[numExecutors] += "<br>";
+                     cRecord.datasets[numExecutors] += dataset;
+                 }
+                 cRecord.logs[numExecutors] = "";
+                 for (n in record.logs)
+                 {
+                     var log = record.logs[n];
+                     var duplicateLog = false;
+                     for (p in cRecord.logFiles)
+                     {
+                         if (log == cRecord.logFiles[p])
+                         {
+                             duplicateLog = true;
+                             break;
+                         }
+                     }
+ 
+                     if (!duplicateLog)
+                     {
+                         if (cRecord.logs[numExecutors].length > 0)
+                             cRecord.logs[numExecutors] += "<br>";
+                             var logName = log.split(/[\\/]/g).pop();
+                             if (jenkinsJobUrl != null && jenkinsWorkspace != null && log.startsWith(jenkinsWorkspace))
+                             {
+                                 var logLink = "<a href='" + jenkinsJobUrl + "ws" + log.slice(jenkinsWorkspace.length) + "/*view*/' target='_blank'>" + logName + "</a>";
+                                 cRecord.logs[numExecutors] = logLink;
+                             }
+                             else
+                             {
+                                 cRecord.logs[numExecutors] += logName;
+                             }
+                             cRecord.logFiles[cRecord.logFiles.length] = log;
+                     }
+                 }
+             }
+             else if (record.type == 'JENKINS')
+             {
+                 jenkinsBuildHtml += "<div id='jenkins'><p><h3>Jenkins Build</h3>";
+                 jenkinsBuildHtml += "<p><table><tr><td class='label'>Project: </td><td><a href='" + record.jobUrl + "'>" + record.jobName + "</a></td></tr>";
+                 jenkinsBuildHtml += "<tr><td class='label'>Build: </td><td><a href='" + record.buildUrl + "'>" + record.buildNumber + "</a></td></tr>";
+                 jenkinsBuildHtml += "<tr><td class='label'>Workspace: </td><td>" + record.workspace + "</td></tr></table></div>";
+                 if (jenkinsWorkspace == null)
+                     jenkinsWorkspace = record.workspace;
+                 if (jenkinsJobUrl == null)
+                     jenkinsJobUrl = record.jobUrl;
+             }
+             else if (record.type == 'DEPENDENCY_SET')
+             {
+                 if (record.dependencySet != null && record.dependencySet.length > 0)
+                     dependencySetCache[record.file] = record.dependencySet;
+             }
+             else if (record.type == 'VERSION')
+             {
+                 versionInfoHtml = "<div id='VersionInfo'><p><h3>Toolkit Version:</h3></p>";
+                 versionInfoHtml += "<p><span class='vlabel'>Version: </span>" + record.version;
+                 versionInfoHtml += "<p><span class='vlabel'>Build: </span>" + record.build;
+                 versionInfoHtml += "<p><span class='vlabel'>Date: </span>" + record.date;
+                 versionInfoHtml += "</div>"
+             }
+         }
+ 
+         var counter = 1;
+         for (var file in cRecords)
+         {
+             var cRecord = cRecords[file];
+             tableHtml += renderExec(counter++, cRecord, dependencySetCache);
+         }
+ 
+         tableHtml += "</table>";
+         var mainHtml = "<a class=\"offleft\" href=\"#buildSummary\">Main Content</a>";
+         mainHtml += "<h2>Build Report</h2>"
+         var buildSummaryHtml = "<div id='buildSummary'>";
+         buildSummaryHtml += "<p><h3>Build Summary</h3><p>Number of files being built: " + (counter-1);
+         buildSummaryHtml += "<p>" + tableHtml + "</div>";
+         mainHtml += versionInfoHtml;
+         mainHtml += jenkinsBuildHtml;
+         mainHtml += buildSummaryHtml;
+         var oldmain = document.getElementById("main");
+         var newmain = document.createElement('div');
+         newmain.setAttribute("id", "main");
+         newmain.setAttribute("role", "main");
+         newmain.innerHTML = mainHtml;
+         oldmain.parentNode.replaceChild(newmain, oldmain);
+ }
+ 
+ function renderExec(counter, cRecord, dependencySetCache)
+ {
+     var tr  = "<tr>";
+     if (counter % 2 == 0)
+         tr = "<tr class='even'>";
+     var rowHtml = tr;
+     rowHtml += "<td headers=\"sequence\" rowspan='" + cRecord.executors.length + "'>" + counter + "</td><th id=\"" + cRecord.file + "\" headers=\"file\" rowspan='" + cRecord.executors.length + "'>" + cRecord.file;
+     var dependencySet = dependencySetCache[cRecord.file];
+     if (dependencySet != null)
+     {
+         var depId = "dep_" + counter;
+         var showDepId = "showDep_" + counter;
+         rowHtml += "<div>";
+         rowHtml += "<div id='" + depId + "' style='display:none' class='dep'>";
+         rowHtml += "<ul>";
+         for (q in dependencySet)
+         {
+             rowHtml += "<li>";
+             var dependency = dependencySet[q];
+             if (dependency.resolved)
+                 rowHtml += dependency.file;
+             else
+                 rowHtml += dependency.lname;
+             rowHtml += "&nbsp;<sub class='depType'>" + dependency.category + "</sub>";
+             rowHtml += "</li>";
+         }
+         rowHtml += "</div>";
+         rowHtml += "<a id='" + showDepId + "' class='bottomRight' href='javascript:onclick=toggle(\"" + depId + "\",\"" + showDepId + "\")'>Show Dependencies</a>";
+         rowHtml += "</div>";
+     }
+     rowHtml += "</th>";
+     var cRecordCount = 0;
+     for (y in cRecord.executors)
+     {
+         rowHtml += "<td headers=\""+cRecord.file+" commands\">" + cRecord.executors[y] + "</td>";
+         rowHtml += "<td headers=\""+cRecord.file+" rc\">" + cRecord.rcs[y] + "</td>";
+         rowHtml += "<td headers=\""+cRecord.file+" dataSets\">" + cRecord.datasets[y] + "</td>";
+         rowHtml += "<td headers=\""+cRecord.file+" outputs\">" + cRecord.outputs[y] + "</td>";
+         rowHtml += "<td headers=\""+cRecord.file+" deployType\">" + cRecord.deployTypes[y] + "</td>";
+         rowHtml += "<td headers=\""+cRecord.file+" logs\">" + cRecord.logs[y] + "</td>";
+         if (cRecordCount < cRecord.executors.length)
+             rowHtml += "</tr>" + tr;
+         cRecordCount++;
+     }
+     rowHtml += "</tr>";
+     return rowHtml;
+ } 
+
+
+
+
+</script>
+
+</body>
+</html>
+
