@@ -339,9 +339,9 @@ pipeline {
 					if (zAppBuildStatic) {
 						zAppBuildDoCheckout   = false // Safety Measure to prevent static copy from getting deleted during clean up step.
 						zAppBuild             = "${zAppBuildInstall}/build.groovy"
-						zAppPkg               = "${zAppBuildInstall}/dbb-ucd-packaging.groovy"
-						ucdBuzTool            = "${zAppBuildInstall}/buztool.sh"
-						BranchBaseLineRefTool = "${zAppBuildInstall}/GetBaseLineRef.groovy"
+						zAppPkg               = "/var/dbb/extensions/dbb20/Pipeline/CreateUCDComponentVersion/dbb-ucd-packaging.groovy"
+						ucdBuzTool            = "$/buztool.sh"
+						BranchBaseLineRefTool = "/var/dbb/extensions/GetBaseLineRef.groovy"
 					} else {
 						zAppBuild             = "${zAppBuildProject}/build.groovy"
 						zAppPkg               = "${zAppBuildProject}/dbb-ucd-packaging.groovy"
