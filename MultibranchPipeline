@@ -161,7 +161,7 @@ def DBBMetaDataURL            = "jdbc:db2:<Db2 server location>"
 def DBBMetaDataUserid         = "DBEHM"
 def DBBMetaDataPwd            = "/var/dbb/config/db2-pwd-file.xml"
 def DBBMetaDataAccess         = ""
-def DBBPropFiles              = "--propFiles /var/dbb/dbb-zappbuild-config/build.properties,/var/dbb/dbb-zappbuild-config/datasets.properties,/var/dbb/dbb-zappbuild-config/dbb-db2-metadatastore-jenkins.properties"
+def DBBPropFiles              = "--propFiles /var/dbb/dbb-zappbuild-config/build.properties,/var/dbb/dbb-zappbuild-config/datasets.properties,/var/dbb/dbb-zappbuild-config/dbb-db2-metadatastore-jenkins.properties" // fileStore: /var/dbb/dbb-zappbuild-config/dbb-db2-metadatastore-jenkins.properties
 
 // Types of Builds
 
