@@ -2,7 +2,7 @@
 EPSMORT    DFHMSD TYPE=&SYSPARM,MODE=INOUT,LANG=COBOL,              @P3CX0008000
                STORAGE=AUTO,TIOAPFX=YES,DSATTS=(COLOR,HILIGHT),        X00090000
                MAPATTS=(COLOR,HILIGHT)                                  00091000
-*       MENU MAP..
+*       MENU MAP. 
 EPMENU  DFHMDI SIZE=(24,80),CTRL=(PRINT,FREEKB)                         00110000
 LITLOAN  DFHMDF POS=(8,15),LENGTH=23,INITIAL='Amount of Loan:',        *
                ATTRB=(ASKIP,NORM)
