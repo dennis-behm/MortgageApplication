@@ -725,7 +725,7 @@ pipeline {
 					// If this branch is a short living branch, then a Baseline Reference tag must be obtained
 					// and added to overwrite the baselineHash hash in an impactBuild scenario.
 
-					if ( (BranchDuration == "Short") && (AppBuildType == "DBBimpactBuild") ) {
+					if ( (BranchDuration == "Short") && (AppBuildType == "${DBBimpactBuild}") ) { // TODO: Fix second condition
 						
 						AppBaseLineRefFile   = "${WORKSPACE}/${AppProject}/${AppName}/application-conf/${AppBaseLineRefFileName}"
 						BranchBaseLineRefLog = "${DBBWorkDir}/${BranchBaseLineRefLogName}"
