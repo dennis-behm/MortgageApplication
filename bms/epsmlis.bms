@@ -7,7 +7,7 @@ EPSMLIS  DFHMDI SIZE=(24,80),CTRL=(PRINT,FREEKB)                         0011000
                ATTRB=(ASKIP,BRT)
          DFHMDF POS=(24,58),LENGTH=0,                                  *
                ATTRB=ASKIP
-*        MENU MORTGAGE LST.
+*        MENU MORTGAGE LIST.
 
 LITCOMP  DFHMDF POS=(3,1),LENGTH=24,INITIAL='Company',                 *
                ATTRB=(ASKIP,NORM)
