@@ -7,7 +7,7 @@
 // Configuration: Review and customize the variable definition and Stepup stage sections.
 //
 //Debug Variables
-def loggerConfig              = false // Enable DBB Toolkit Tracing (true/false).  See DBBLogger Variable, below.
+def loggerConfig              = true // Enable DBB Toolkit Tracing (true/false).  See DBBLogger Variable, below.
 def verbose                   = true  // Enable zAppBuild Verbose Tracing (true/false).
 def pipeverbose               = true  // Enabled Pipeline Debug Messages (true/false).
 
