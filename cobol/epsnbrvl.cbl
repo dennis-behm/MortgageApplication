@@ -14,7 +14,7 @@
       *       MONTHLY PAYMENT
       *
       *    (C) 2023 IBM - I was here too
-      *    Change for Rel 101
+      *    Minor update to trigger build
        ENVIRONMENT DIVISION.
        CONFIGURATION SECTION.
        SOURCE-COMPUTER. FLEX-ES.
