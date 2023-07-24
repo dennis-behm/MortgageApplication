@@ -13,7 +13,7 @@
       *    OUTPUT:
       *       MONTHLY PAYMENT
       *
-      *    (C) 2023 IBM - I was here too
+      *    (C) 2023 IBM - I was here 
       *    Minor update to trigger build
        ENVIRONMENT DIVISION.
        CONFIGURATION SECTION.
