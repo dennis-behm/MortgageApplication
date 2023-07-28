@@ -2,7 +2,7 @@
 resourceDefinitions:
 - mapset:
     name: EPSMORT
-    group: EPSMTM
+    group: EPSMTM 
 - program:
     name: EPSCMORT
     group: EPSMTM
