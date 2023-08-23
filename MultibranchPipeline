@@ -7,7 +7,7 @@
 // Configuration: Review and customize the variable definition and Stepup stage sections.
 //
 //Debug Variables
-def loggerConfig              = false // Enable DBB Toolkit Tracing (true/false).  See DBBLogger Variable, below.
+def loggerConfig              = true // Enable DBB Toolkit Tracing (true/false).  See DBBLogger Variable, below.
 def verbose                   = true  // Enable zAppBuild Verbose Tracing (true/false).
 def pipeverbose               = true  // Enabled Pipeline Debug Messages (true/false).
 
@@ -324,7 +324,8 @@ pipeline {
 							DBBLogger = "-Dlog4j.configurationFile=file:${WORKSPACE}/${AppProject}/${AppName}/application-conf/log4j2.properties"
 						} else {
 							// DBB Toolkit 2.n.n and higher uses Simple Logging Facade for Java (SLF4J). Set CLASSPATH to simplelogger.properties location.
-							DBBLogger  = "-classpath ${WORKSPACE}/${AppProject}/${AppName}/application-conf"
+							// DBBLogger  = "-classpath ${WORKSPACE}/${AppProject}/${AppName}/application-conf"
+							DBBLogger  = "-classpath /var/jenkins/zappbuild_config"
 						}
 					}
 					
